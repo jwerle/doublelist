@@ -8,6 +8,9 @@ list
 Add this to `zz.toml`:
 
 ```toml
+[dependencies]
+list = "*"
+
 [repos]
 list = "git://github.com/jwerle/zz-list.git"
 ```
