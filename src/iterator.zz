@@ -1,0 +1,133 @@
+using list::{ List }
+using node::{ Node }
+
+/**
+ * The list iterator iteration direction.
+ */
+export enum Direction {
+  Head = 0,
+  Tail = 1
+}
+
+/**
+ * The `Direction::Head` enum value exported as a
+ * constant for better ergonomics.
+ */
+export const usize HEAD = Direction::Head;
+
+/**
+ * The `Direction::Tail` enum value exported as a
+ * constant for better ergonomics.
+ */
+export const usize TAIL = Direction::Tail;
+
+/**
+ * An iterator context for a list.
+ */
+export struct Iterator {
+  Direction direction;
+  bool ended;
+  List *list;
+  usize list_tail;
+  Node unsafe *node;
+}
+
+/**
+ * `Iterator` stack constructor with direction from a list.
+ */
+export fn make(Iterator new mut *self, List+L *list, Direction direction)
+  model safe(self)
+  where safe(list)
+{
+  self->list = list;
+  self->list_tail = L;
+
+  self->ended = false;
+  self->direction = direction;
+
+  switch direction {
+    Direction::Head => { self->node = list->head; }
+    Direction::Tail => { self->node = list->tail; }
+  }
+
+  if 0 == self->node {
+    self->ended = true;
+  }
+}
+
+/**
+ * Returns a pointer to the next node in the list.
+ * @example
+ *   new+4 l = list::make();
+ *   let it = l.iterator();
+ *   while !it.ended {
+ *     let node = it.next();
+ *   }
+ */
+export fn next(Iterator mut *self) -> Node *
+  model safe(self)
+  model safe(return)
+  model safe(return->value)
+
+  where false == self->ended
+{
+  let node = self->node;
+
+  if 0 != node {
+    static_attest(safe(node));
+    switch self->direction {
+      Direction::Head => { self->node = node->next; }
+      Direction::Tail => { self->node = node->prev; }
+    }
+  }
+
+  if 0 == self->node {
+    self->ended = true;
+  }
+
+  static_attest(safe(node));
+  static_attest(safe(node->value));
+
+  return node;
+}
+
+/**
+ * Marks the iterator as "ended".
+ * @example
+ *   new+4 l = list::make();
+ *   let mut it = l.iterator();
+ *
+ *   while !it.ended {
+ *     if l.contains(key) {
+ *       it.end();
+ *     } else {
+ *       it.next();
+ *    }
+ *   }
+ *
+ *   it.destroy();
+ */
+export fn end(Iterator mut *self)
+  model safe(self)
+  where false == self->ended
+{
+  self->ended = true;
+  self->node = 0;
+}
+
+/**
+ * Seek iterator to a node.
+ */
+export fn seek(Iterator mut *self, Node * unsafe node)
+  model safe(self)
+{
+  usize L = self->list_tail;
+  List+L mut * mut list = (List mut *) self->list;
+  static_attest(safe(list));
+  if 0 != node {
+    static_attest(safe(node));
+    if list->contains_node(node) {
+      self->node = node;
+    }
+  }
+}

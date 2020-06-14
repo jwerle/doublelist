@@ -1,0 +1,749 @@
+using iterator::{ make as make_iterator, Direction, Iterator, HEAD, TAIL }
+using node::{ make as make_node, Node }
+using err::{ assert }
+
+/**
+ * A compare function used to compare pointers when find a node in a list.
+ */
+export closure CompareNodeValueFunction(void *a, void *b) -> bool;
+
+/**
+ * A structure prototype of list defaults, such as the iterator direction.
+ */
+export struct ListDefaults {
+  Direction iterator_direction;
+  CompareNodeValueFunction node_compare_function;
+}
+
+/**
+ * A doubly linked list suitable for stack allocation.
+ */
+export struct List+ {
+  Node mut unsafe *head;
+  Node mut unsafe *tail;
+  usize length;
+
+  CompareNodeValueFunction compare;
+  ListDefaults defaults;
+  Node nodes[];
+}
+
+/**
+ * A static structure of list configuration defaults.
+ */
+static ListDefaults shared_defaults = ListDefaults {
+  iterator_direction: HEAD,
+  node_compare_function: default_node_value_compare
+};
+
+/**
+ * Creates a unlinked node from a given value attached to list.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = l.create_node("hello");
+ */
+fn create_node(List+L mut *self, void *value) -> Node mut *
+  model safe(self)
+  model safe(value)
+  model safe(return)
+  model safe(return->value)
+  where safe(value)
+{
+  assert(self->length < L);
+  let length = self->length;
+  let mut node = (Node mut *) &self->nodes[length];
+
+  make_node(node, value);
+  node->list = self;
+  static_attest(safe(node->value));
+  return node;
+}
+
+/**
+ * The default node value comparator function.
+ * @private
+ */
+fn default_node_value_compare(void *left, void *right) -> bool
+  model safe(left)
+  model safe(right)
+{
+  static_attest(safe(left));
+  static_attest(safe(right));
+  return left == right;
+}
+
+/**
+ * `List` constructor. Initializes a `List` pointer.
+ * @constructor
+ * @example
+ *   new+4 mut l = list::make();
+ */
+export fn make(List+L new mut *self)
+  model safe(self)
+  model safe(self->compare)
+  model self->length < L
+  where L > 0
+{
+  static_attest(safe(&shared_defaults));
+  static_attest(len(&self->defaults) == len(ListDefaults));
+
+  self->defaults = shared_defaults;
+
+  self->length = 0;
+  self->compare.fn = self->defaults.node_compare_function.fn;
+  self->compare.ctx = self->defaults.node_compare_function.ctx;
+
+  static_attest(safe(self->compare));
+  static_attest(self->length < L);
+}
+
+/**
+ * Creates and returns a stack allocated iterator for a list instance
+ * in the default iterator direction.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let it = l.iterator();
+ *
+ *   while !it.ended {
+ *     let node = it.next();
+ *   }
+ */
+export fn iterator(List+L *self) -> Iterator
+  model safe(self)
+{
+  let defaults = self->defaults;
+  return self->iterator_with_direction(defaults.iterator_direction);
+}
+
+/**
+ * Creates and returns a stack allocated iterator for a list instance
+ * in the "head" direction.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let it = l.iterator_head();
+ *
+ *   while !it.ended {
+ *     let node = it.next();
+ *   }
+ */
+export inline fn iterator_head(List+L *self) -> Iterator
+  model safe(self)
+{
+  return self->iterator_with_direction(HEAD);
+}
+
+/**
+ * Creates and returns a stack allocated iterator for a list instance
+ * in the "tail" direction.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let it = list.iterator_tail();
+ *
+ *   while !it.ended {
+ *     let node = it.next();
+ *   }
+ */
+export inline fn iterator_tail(List+t *self) -> Iterator
+  model safe(self)
+{
+  return iterator_with_direction(self, TAIL);
+}
+
+/**
+ * Creates and returns a stack allocated iterator for a list instance
+ * in a given direction.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let it = list.iterator_with_direction(list::HEAD);
+ *
+ *   while !it.ended {
+ *     let node = it.next();
+ *   }
+ */
+export fn iterator_with_direction(List+L *self, Direction direction) -> Iterator
+  model safe(self)
+{
+  new it = make_iterator(self, direction);
+  return it;
+}
+
+/**
+ * Pushes a value to the right of the list updating the tail returning the
+ * newly created list node.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ */
+export fn rpush(List+L mut *self, void *value) -> Node *
+  model safe(self)
+  model safe(value)
+  model safe(return)
+  model safe(return->value)
+  model self->length >= 0
+  model self->length <= L
+  where safe(value)
+{
+  let mut node = self->create_node(value);
+  return self->rpush_node(node);
+}
+
+/**
+ * Pushes a node with a value to the right of the list updating the tail
+ * returning the newly created list node.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = list::node::make("hello")
+ *   l.rpush_node(&node);
+ */
+export fn rpush_node(List+L mut *self, Node mut *node) -> Node *
+  model safe(self)
+  model safe(node)
+  model safe(return)
+  model safe(return->value)
+  model self->length >= 0
+  model self->length <= L
+  where safe(node->value)
+{
+  if self->length > 0 && 0 != self->tail {
+    static_attest(safe(self->tail));
+
+    node->prev = self->tail;
+    node->next = 0;
+    self->length = self->length + 1;
+    self->tail->next = node;
+    self->tail = node;
+  } else {
+    node->prev = 0;
+    node->next = 0;
+    self->length = 1;
+    self->head = node;
+    self->tail = node;
+  }
+
+  static_attest(self->length <= L);
+  static_attest(safe(node->value));
+
+  return node;
+}
+
+/**
+ * Pushes a value to the left of the list updating the head returning the
+ * newly created list node.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.lpush("world");
+ *   l.lpush("hello");
+ */
+export fn lpush(List+L mut *self, void *value) -> Node *
+  model safe(self)
+  model safe(value)
+  model safe(return)
+  model safe(return->value)
+  model self->length >= 0
+  model self->length <= L
+  where safe(value)
+{
+  let mut node = self->create_node(value);
+  return self->lpush_node(node);
+}
+
+/**
+ * Pushes a value to the left of the list updating the head returning the
+ * newly created list node.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = list::node::make("hello");
+ *   l.lpush_node(node);
+ */
+export fn lpush_node(List+L mut *self, Node mut *node) -> Node *
+  model safe(self)
+  model safe(node)
+  model safe(return)
+  model safe(return->value)
+  model self->length >= 0
+  model self->length <= L
+  where safe(node->value)
+{
+  if self->length > 0 && 0 != self->head {
+    static_attest(safe(self->head));
+
+    node->next = self->head;
+    node->prev = 0;
+    self->length = self->length + 1;
+    self->head->prev = node;
+    self->head = node;
+
+  } else {
+    node->prev = 0;
+    node->next = 0;
+    self->length = 1;
+    self->head = node;
+    self->tail = node;
+  }
+
+  static_attest(self->length <= L);
+  static_attest(safe(node->value));
+
+  return node;
+}
+
+/**
+ * Pops and returns a node with its value from the right of the list updating
+ * the tail. The returned node's memory must be managed by the caller as the
+ * list will not free any allocated resources for the returned node as it is
+ * unreferenced from the list.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ *   l.rpop(); // "world"
+ */
+export fn rpop(List+L mut *self) -> void *
+  model safe(self)
+  model self->length >= 0
+  model self->length <= L
+{
+  let length = self->length;
+  let node = self->tail;
+
+  if length - 1 > 0 && 0 != node {
+    static_attest(safe(node));
+    static_attest(safe(node->prev));
+
+    self->length = length - 1;
+    self->tail = node->prev;
+    self->tail->next = 0;
+
+    static_attest(self->length < L);
+  } else {
+    self->length = 0;
+    self->tail = 0;
+    self->head = 0;
+
+    static_attest(0 == self->length);
+  }
+
+  let value = node->value;
+
+  if 0 != value {
+    static_attest(safe(value));
+  }
+
+  node->unref();
+
+  return value;
+}
+
+/**
+ * Pops and returns a node with its value from the left of the list updating
+ * the head. The returned node's memory must be managed by the caller as the
+ * list will not free any allocated resources for the returned node as it is
+ * unreferenced from the list.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ *   l.lpop(); // "hello"
+ */
+export fn lpop(List+L mut *self) -> void *
+  model safe(self)
+  model self->length >= 0
+  model self->length <= L
+{
+  let length = self->length;
+  let node = self->head;
+
+  if length - 1 > 0 && 0 != node {
+    static_attest(safe(node));
+    static_attest(safe(node->next));
+
+    self->length = length - 1;
+    self->head = node->next;
+    self->head->prev = 0;
+
+    static_attest(self->length < L);
+  } else {
+    self->length = 0;
+    self->tail = 0;
+    self->head = 0;
+
+    static_attest(0 == self->length);
+  }
+
+  let value = node->value;
+
+  if 0 != value {
+    static_attest(safe(value));
+  }
+
+  node->unref();
+
+  return value;
+}
+
+/**
+ * Finds and returns a list node that points to a value that matches the given
+ * value pointer. A user supplied comparator function can be used by setting
+ * `l.compare` to a `CompareNodeValueFunction` type, otherwise
+ * simple pointer comparison is used by default.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ *   let node = l.find("world"); // node with value "world"
+ */
+export fn find(List+L mut *self, void *value) -> Node *
+  model safe(self)
+  where safe(value)
+{
+  if 0 == self->compare.fn {
+    return 0;
+  }
+
+  let mut tail = self->iterator_tail();
+  let mut head = self->iterator();
+
+  static_attest(safe(self->compare));
+  while !head.ended && !tail.ended {
+    let left = head.next();
+    let right = tail.next();
+
+    if self->compare(value, left->value) {
+      static_attest(safe(left));
+      return left;
+    }
+
+    if self->compare(value, right->value) {
+      static_attest(safe(right));
+      return right;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Finds and returns the list node at a given index.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ *   let node = l.at(1); // node with value "world"
+ *   let node = l.at(0); // node with value "hello"
+ *   let node = l.at(-1); // node with value "world"
+ */
+export fn at(List+L mut *self, int index) -> Node *
+  model safe(self)
+{
+  if (usize) index >= self->length {
+    return 0;
+  }
+
+  if 0 == self->head && 0 == self->tail {
+    return 0;
+  }
+
+  let mut it = self->iterator();
+
+  if it.ended {
+    return 0;
+  }
+
+  let mut node = it.next();
+  let mut i = index;
+
+  if index < 0 {
+    it.direction = (Direction) TAIL;
+    it.node = self->tail;
+    i = ~index;
+  }
+
+  while !it.ended && i-- > 0 {
+    node = it.next();
+  }
+
+  if 0 != node {
+    static_attest(safe(node));
+  }
+
+  return node;
+}
+
+/**
+ * Finds a list node that points to a given value and removes it from the
+ * list.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.rpush("hello");
+ *   l.rpush("world");
+ *   l.remove("world");
+ *   assert(1 == l.length);
+ */
+export fn remove(List+L mut *self, void *value)
+  model safe(self)
+  model safe(value)
+  model self->length >= 0
+  model self->length <= L
+  where safe(value)
+{
+  let node = (Node mut *) self->find(value);
+
+  if 0 != node {
+    static_attest(safe(node));
+    self->remove_node(node);
+  }
+}
+
+/**
+ * Removes a node from the list, updating links and list
+ * length.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = l.push("hello");
+ *   l.remove_node(node);
+ */
+export fn remove_node(List+L mut *self, Node mut *node)
+  model safe(self)
+  model safe(node)
+  model self->length >= 0
+  model self->length < L
+  where safe(node)
+{
+  node->unref();
+  self->length = self->length - 1;
+  static_attest(self->length < L);
+}
+
+/**
+ * Returns a boolean indicating if a list contains a value.
+ * @example
+ *   new+4 mut l = list::make();
+ *   l.push("hello");
+ *   if l.contains("hello") {
+ *     l.push("world");
+ *   }
+ */
+export fn contains(List+L mut *self, void *value) -> bool
+  model safe(self)
+  model safe(value)
+  where safe(value)
+{
+  let node = self->find(value);
+
+  if 0 != node {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ * Returns a boolean indicating if a list contains a list node.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let hello = list.push("hello");
+ *   if list.contains_node(hello) {
+ *     let world = list.create_node("world");
+ *     list.push_node(world);
+ *   }
+ */
+export fn contains_node(List+L mut *self, Node *node) -> bool
+  model safe(self)
+  model safe(node)
+  where safe(node)
+{
+  let mut it = self->iterator();
+
+  while !it.ended {
+    let suspect = it.next();
+    if node == suspect {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * An alias to `list.rpop()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   list.rpush("hello");
+ *   list.rpush("world");
+ *   list.pop(); // "world"
+ */
+export fn pop(List+L mut *self) -> void *
+  model safe(self)
+{
+  return self->rpop();
+}
+
+/**
+ * An alias to `list.rpush()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   list.push("hello");
+ *   list.push("world");
+ */
+export fn push(List+L mut *self, void *value) -> Node *
+  model safe(self)
+  where safe(value)
+{
+  return self->rpush(value);
+}
+
+/**
+ * An alias to `list.rpush_node()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = list::node::make("hello")
+ *   list.push_node(&node);
+ */
+export fn push_node(List+L mut *self, Node mut *node) -> Node *
+  model safe(self)
+  model safe(node)
+  model safe(return)
+  model safe(return->value)
+  where safe(node->value)
+{
+  return self->rpush_node(node);
+}
+
+/**
+ * An alias to `list.lpop()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   list.push("hello");
+ *   list.push("world");
+ *   list.shift(); // "hello"
+ */
+export fn shift(List+L mut *self) -> void *
+  model safe(self)
+{
+  return self->lpop();
+}
+
+/**
+ * An alias to `list.lpush()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   list.unshift("world");
+ *   list.unshift("hello");
+ */
+export fn unshift(List+L mut *self, void *value) -> Node *
+  model safe(self)
+  model safe(return)
+  model self->length <= L
+  where safe(value)
+{
+  return self->lpush(value);
+}
+
+/**
+ * An alias to `list.lpush_node()`.
+ * @example
+ *   new+4 mut l = list::make();
+ *   let node = list::node::make("hello");
+ *   list.unshift_node(node);
+ */
+export fn unshift_node(List+L mut *self, Node mut *node) -> Node *
+  model safe(self)
+  model safe(node)
+  model safe(return)
+  model safe(return->value)
+  model self->length <= L
+  where safe(node->value)
+{
+  return self->lpush_node(node);
+}
+
+/**
+ * Take a slice from the list at a depth offset.
+ * @example
+ *   new+4 l list::make()
+ *   void * mut values[2];
+ *   l.push("hello");
+ *   l.push("world");
+ *   l.slice(values, 0, 2);
+ */
+export fn slice(List+L *self, void * mut *out, usize offset, usize count) -> usize
+  where safe(out)
+  where len(out) >= count
+{
+  usize mut visited = 0;
+  usize mut i = 0;
+  let mut it = self->iterator();
+
+  while !it.ended && visited < count {
+    let node = it.next();
+    if i >= offset {
+      out[visited] = node->value;
+      visited++;
+    }
+
+    i++;
+  }
+
+  return visited;
+}
+
+/**
+ * Compute the index of a node's value and return it. If not found, then -1 is returned.
+ * -1 is also returned if a compare function is not found.
+ */
+export fn index(List+L *self, void *value) -> i32
+  model safe(self)
+  where safe(value)
+{
+  if 0 == value {
+    return -1;
+  }
+
+  if 0 == self->compare.fn {
+    return -1;
+  }
+
+  static_attest(safe(self->compare));
+
+  i32 mut i = -1;
+  let mut it = self->iterator();
+
+  while !it.ended {
+    let node = it.next();
+
+    i++;
+
+    if self->compare(value, node->value) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Compute the index of a node and return it. If not found, then -1 is returned.
+ */
+export fn node_index(List+L *self, Node * unsafe node) -> i32
+  model safe(self)
+{
+  if 0 == node {
+    return -1;
+  }
+
+  i32 mut i = -1;
+  let mut it = self->iterator();
+
+  while !it.ended {
+    let suspect = it.next();
+
+    i++;
+
+    if node == suspect {
+      return i;
+    }
+  }
+
+  return -1;
+}

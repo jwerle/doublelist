@@ -1,0 +1,16 @@
+[project]
+version = "0.1.0"
+name = "list"
+cincludes = []
+cobjects = []
+pkgconfig = []
+cflags = []
+lflags = []
+
+[variants]
+default = []
+
+[dependencies]
+err = "*"
+log = "*"
+mem = "*"

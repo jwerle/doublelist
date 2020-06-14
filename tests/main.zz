@@ -1,0 +1,336 @@
+using <assert.h>::{ assert } // `err::assert()` has bad callsite effect breaking SSA for some reason
+
+using string::{ strlen }
+using list::{ List, Node }
+using list
+using mem
+using log
+
+fn cmp(char *left, void * unsafe right) -> bool
+  model safe(left)
+{
+  if 0 != right {
+    static_attest(safe(right));
+    static_attest(len(right) > len(left));
+    static_attest(nullterm(left));
+    return mem::eq(left, right, strlen(left));
+  }
+
+  return false;
+}
+
+fn main() -> int {
+  test_list();
+  test_iterator();
+  test_node();
+  return 0;
+}
+
+fn test_list() {
+  new+1 l = list::make();
+  assert(0 == l.head);
+  assert(0 == l.tail);
+  assert(0 == l.length);
+
+  test_list_rpush();
+  test_list_lpush();
+  test_list_rpop();
+  test_list_lpop();
+  test_list_find();
+  test_list_at();
+  test_list_remove();
+  test_list_pop();
+  test_list_push();
+  test_list_shift();
+  test_list_unshift();
+  test_list_slice();
+  test_list_index();
+}
+
+fn test_list_rpush() {
+  new+1 mut l = list::make();
+  static_attest(safe(l));
+
+  l.rpush("hello");
+  assert(1 == l.length);
+}
+
+fn test_list_lpush() {
+  new+1 mut l = list::make();
+  static_attest(safe(l));
+
+  l.lpush("hello");
+  assert(1 == l.length);
+}
+
+fn test_list_rpop() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  let first = l.rpush("hello");
+  l.rpush("world");
+  assert(2 == l.length);
+
+  assert(cmp("world", l.rpop()));
+  assert(1 == l.length);
+  assert(first == l.head);
+  assert(first == l.tail);
+}
+
+fn test_list_lpop() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.rpush("hello");
+  let second = l.rpush("world");
+
+  assert(2 == l.length);
+  assert(cmp("hello", l.lpop()));
+  assert(1 == l.length);
+  assert(second == l.head);
+  assert(second == l.tail);
+}
+
+fn test_list_find() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  let node = (Node mut *) l.rpush("hello");
+  l.rpush("world");
+  static_attest(safe(node));
+
+  let found = l.find("hello");
+  static_attest(safe(found));
+  assert(node == found);
+  assert(cmp("hello", found->value));
+}
+
+fn test_list_at() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  let hello = l.rpush("hello");
+  let world = l.rpush("world");
+  assert(hello == l.at(0));
+  assert(world == l.at(1));
+  assert(0 == l.at(2));
+}
+
+fn test_list_remove() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.rpush("hello");
+  l.rpush("world");
+  assert(2 == l.length);
+
+  l.remove("hello");
+  assert(1 == l.length);
+  assert(0 == l.find("hello"));
+
+  l.remove("world");
+  assert(0 == l.length);
+  assert(0 == l.find("world"));
+}
+
+fn test_list_pop() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.rpush("hello");
+  l.rpush("world");
+  assert(2 == l.length);
+
+  assert(cmp("world", l.pop()));
+  assert(1 == l.length);
+}
+
+fn test_list_push() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.push("hello");
+  l.push("world");
+  assert(2 == l.length);
+  assert(cmp("world", l.pop()));
+  assert(1 == l.length);
+}
+
+fn test_list_shift() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.push("hello");
+  l.push("world");
+  assert(2 == l.length);
+
+  assert(cmp("hello", l.shift()));
+  assert(1 == l.length);
+}
+
+fn test_list_unshift() {
+  new+2 mut l = list::make();
+  static_attest(safe(l));
+
+  l.unshift("hello");
+  assert(1 == l.length);
+
+  assert(cmp("hello", l.pop()));
+  assert(0 == l.length);
+}
+
+fn test_list_slice() {
+  new+4 mut l = list::make();
+  void * mut values[4] = {0};
+
+  l.push("a");
+  l.push("b");
+  l.push("c");
+  l.push("d");
+
+  assert(1 == l.slice(values, 0, 1));
+  assert(cmp("a", values[0]));
+
+  assert(1 == l.slice(values, 1, 1));
+  assert(cmp("b", values[0]));
+
+  assert(1 == l.slice(values, 2, 1));
+  assert(cmp("c", values[0]));
+
+  assert(1 == l.slice(values, 3, 1));
+  assert(cmp("d", values[0]));
+
+  assert(2 == l.slice(values, 1, 2));
+  assert(cmp("b", values[0]));
+  assert(cmp("c", values[1]));
+
+  assert(2 == l.slice(values, 2, 2));
+  assert(cmp("c", values[0]));
+  assert(cmp("d", values[1]));
+
+  assert(4 == l.slice(values, 0, 4));
+  assert(cmp("a", values[0]));
+  assert(cmp("b", values[1]));
+  assert(cmp("c", values[2]));
+  assert(cmp("d", values[3]));
+}
+
+fn test_list_index() {
+  new+4 mut l = list::make();
+  let hello = l.push("hello");
+  let world = l.push("world");
+
+  assert(0 == l.index("hello"));
+  assert(1 == l.index("world"));
+  assert(0 == l.node_index(hello));
+  assert(1 == l.node_index(world));
+}
+
+fn test_iterator() {
+  new+5 mut original = list::make();
+  new+5 mut copy = list::make();
+
+  static_attest(safe(original));
+  static_attest(safe(copy));
+
+  original.push("a");
+  original.push("b");
+  original.push("c");
+  original.push("d");
+  original.push("e");
+
+  {
+    let mut it = original.iterator();
+    while !it.ended {
+      let node = it.next();
+      static_attest(safe(node));
+      static_attest(safe(node->value));
+      copy.push(node->value);
+    }
+
+    assert(original.length == copy.length);
+  }
+
+  {
+    let mut it = original.iterator();
+    usize mut index = 0;
+    while !it.ended {
+      let left = it.next();
+      let right = copy.at(index);
+      if 0 != left && 0 != right {
+        static_attest(safe(left));
+        static_attest(safe(right));
+        assert(cmp(left->value, right->value));
+        index++;
+      }
+    }
+
+    assert(index == original.length);
+    assert(index == copy.length);
+  }
+
+  {
+    let mut it = copy.iterator();
+    usize mut index = 0;
+    it.seek(copy.at(3));
+    while !it.ended {
+      it.next();
+      index++;
+    }
+    assert(2 == index);
+  }
+}
+
+fn test_node() {
+  {
+    new node = list::node::make("hello");
+    assert(cmp("hello", node.value));
+  }
+
+  {
+    new+1 mut l = list::make();
+    new nested = list::node::make("hello");
+    new node = list::node::make(&nested);
+    static_attest(safe(node));
+
+    let value = (list::node::Node *) node.value;
+    static_attest(safe(value));
+    assert(cmp("hello", value->value));
+
+    l.push_node(&node);
+    assert(&node == l.find(&nested));
+  }
+
+  {
+    new+5 mut l = list::make();
+    let start = l.push("start");
+    let middle0 = l.push("middle0");
+    let middle1 = l.push("middle1");
+    let middle2 = l.push("middle2");
+    let end = l.push("end");
+
+    static_attest(safe(start));
+    static_attest(safe(middle0));
+    static_attest(safe(middle1));
+    static_attest(safe(middle2));
+    static_attest(safe(end));
+
+    assert(start == l.head);
+    assert(end == l.tail);
+
+    assert(0 == start->prev);
+    assert(middle0 == start->next);
+
+    assert(start == middle0->prev);
+    assert(middle1 == middle0->next);
+
+    assert(middle0 == middle1->prev);
+    assert(middle2 == middle1->next);
+
+    assert(middle1 == middle2->prev);
+    assert(end == middle2->next);
+
+    assert(middle2 == end->prev);
+    assert(0 == end->next);
+  }
+}
