@@ -12,7 +12,7 @@ Add this to `zz.toml`:
 list = "*"
 
 [repos]
-list = "git://github.com/jwerle/zz-list.git"
+list = "git://github.com/zzmodules/list"
 ```
 
 ## Usage
