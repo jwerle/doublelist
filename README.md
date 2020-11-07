@@ -1,5 +1,5 @@
-list
-====
+doublelist
+==========
 
 > A doubly linked list suitable for stack allocation.
 
@@ -9,21 +9,21 @@ Add this to `zz.toml`:
 
 ```toml
 [dependencies]
-list = "*"
+doublelist = "*"
 
 [repos]
-list = "git://github.com/zzmodules/list"
+doublelist = "git://github.com/jwerle/doublelist"
 ```
 
 ## Usage
 
 ```c++
-using list
+using doublelist
 using log
 
 fn main () -> int {
   // allocate a new mutable list with tail size of 2 (the number of possible elements)
-  new+2 mut items = list::make();
+  new+2 mut items = doublelist::make();
 
   items.push("hello");
   items.push("world");
@@ -45,12 +45,12 @@ fn main () -> int {
 
 A doubly linked list suitable for stack allocation.
 
-#### `new+tail l = list::make()`
+#### `new+tail l = doublelist::make()`
 
 `List` constructor. Initializes a `List` pointer.
 
 ```c++
-new+4 items = list::make();
+new+4 items = doublelist::make();
 ```
 
 #### `node = l.rpush(value)`
@@ -164,9 +164,9 @@ Creates and returns a stack allocated iterator for a list instance
 in a given direction.
 
 ```c++
-let it = list.iterator_with_direction(list::HEAD); // default
+let it = list.iterator_with_direction(doublelist::HEAD); // default
 // or
-let it = list.iterator_with_direction(list::TAIL);
+let it = list.iterator_with_direction(doublelist::TAIL);
 ```
 
 _See the [Iterator API](#iterator) for more information about list iterators._
@@ -237,7 +237,7 @@ Compute the index of a node's value and return it. If not found, then -1 is retu
 -1 is also returned if a compare function is not found.
 
 ```c++
-new+2 l = list::make();
+new+2 l = doublelist::make();
 
 l.push("hello");
 l.push("world");
@@ -250,7 +250,7 @@ assert(1 == l.index("world"));
 
 An iterator context for a list.
 
-#### `new it = list::iterator::make(list, direction)`
+#### `new it = doublelist::iterator::make(list, direction)`
 
 `Iterator` stack constructor with direction from a list. Initializes a
 `Iterator` pointer with a `List` pointer and `direction`. Typically, you
@@ -294,9 +294,9 @@ remove a reference to any nodes in the list.
 
 #### Iterator Directions
 
-Iterators can traverse a list in the `list::HEAD`
-(`list::iterator::Direction::Head`) or `list::TAIL`
-(`list::iterator::Direction::Tail`) directions.
+Iterators can traverse a list in the `doublelist::HEAD`
+(`doublelist::iterator::Direction::Head`) or `doublelist::TAIL`
+(`doublelist::iterator::Direction::Tail`) directions.
 
 ### Node
 

@@ -1,8 +1,8 @@
 using <assert.h>::{ assert } // `err::assert()` has bad callsite effect breaking SSA for some reason
 
 using buffer::{ strlen }
-using list::{ List, Node }
-using list
+using doublelist::{ List, Node }
+using doublelist
 using mem
 using log
 
@@ -27,7 +27,7 @@ fn main() -> int {
 }
 
 fn test_list() {
-  new+1 l = list::make();
+  new+1 l = doublelist::make();
   assert(0 == l.head);
   assert(0 == l.tail);
   assert(0 == l.length);
@@ -48,7 +48,7 @@ fn test_list() {
 }
 
 fn test_list_rpush() {
-  new+1 mut l = list::make();
+  new+1 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.rpush("hello");
@@ -56,7 +56,7 @@ fn test_list_rpush() {
 }
 
 fn test_list_lpush() {
-  new+1 mut l = list::make();
+  new+1 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.lpush("hello");
@@ -64,7 +64,7 @@ fn test_list_lpush() {
 }
 
 fn test_list_rpop() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   let first = l.rpush("hello");
@@ -78,7 +78,7 @@ fn test_list_rpop() {
 }
 
 fn test_list_lpop() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.rpush("hello");
@@ -92,7 +92,7 @@ fn test_list_lpop() {
 }
 
 fn test_list_find() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   let node = (Node mut *) l.rpush("hello");
@@ -106,7 +106,7 @@ fn test_list_find() {
 }
 
 fn test_list_at() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   let hello = l.rpush("hello");
@@ -117,7 +117,7 @@ fn test_list_at() {
 }
 
 fn test_list_remove() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.rpush("hello");
@@ -134,7 +134,7 @@ fn test_list_remove() {
 }
 
 fn test_list_pop() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.rpush("hello");
@@ -146,7 +146,7 @@ fn test_list_pop() {
 }
 
 fn test_list_push() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.push("hello");
@@ -157,7 +157,7 @@ fn test_list_push() {
 }
 
 fn test_list_shift() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.push("hello");
@@ -169,7 +169,7 @@ fn test_list_shift() {
 }
 
 fn test_list_unshift() {
-  new+2 mut l = list::make();
+  new+2 mut l = doublelist::make();
   static_attest(safe(l));
 
   l.unshift("hello");
@@ -180,7 +180,7 @@ fn test_list_unshift() {
 }
 
 fn test_list_slice() {
-  new+4 mut l = list::make();
+  new+4 mut l = doublelist::make();
   void * mut values[4] = {0};
 
   l.push("a");
@@ -216,7 +216,7 @@ fn test_list_slice() {
 }
 
 fn test_list_index() {
-  new+4 mut l = list::make();
+  new+4 mut l = doublelist::make();
   let hello = l.push("hello");
   let world = l.push("world");
 
@@ -227,8 +227,8 @@ fn test_list_index() {
 }
 
 fn test_iterator() {
-  new+5 mut original = list::make();
-  new+5 mut copy = list::make();
+  new+5 mut original = doublelist::make();
+  new+5 mut copy = doublelist::make();
 
   original.push("a");
   original.push("b");
@@ -280,17 +280,17 @@ fn test_iterator() {
 
 fn test_node() {
   {
-    new node = list::node::make("hello");
+    new node = doublelist::node::make("hello");
     assert(cmp("hello", node.value));
   }
 
   {
-    new+1 mut l = list::make();
-    new nested = list::node::make("hello");
-    new node = list::node::make(&nested);
+    new+1 mut l = doublelist::make();
+    new nested = doublelist::node::make("hello");
+    new node = doublelist::node::make(&nested);
     static_attest(safe(node));
 
-    let value = (list::node::Node *) node.value;
+    let value = (doublelist::node::Node *) node.value;
     static_attest(safe(value));
     assert(cmp("hello", value->value));
 
@@ -299,7 +299,7 @@ fn test_node() {
   }
 
   {
-    new+5 mut l = list::make();
+    new+5 mut l = doublelist::make();
     let start = l.push("start");
     let middle0 = l.push("middle0");
     let middle1 = l.push("middle1");

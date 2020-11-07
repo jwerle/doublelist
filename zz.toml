@@ -1,6 +1,7 @@
 [project]
 version = "0.1.0"
-name = "list"
+name = "doublelist"
+description = "A doubly linked list suitable for stack allocation."
 cincludes = []
 cobjects = []
 pkgconfig = []
