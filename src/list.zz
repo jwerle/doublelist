@@ -89,6 +89,8 @@ export fn make(List+L new mut *self)
 
   self->defaults = shared_defaults;
 
+  self->head = 0;
+  self->tail = 0;
   self->length = 0;
   self->compare.fn = self->defaults.node_compare_function.fn;
   self->compare.ctx = self->defaults.node_compare_function.ctx;

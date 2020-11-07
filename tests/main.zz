@@ -1,6 +1,6 @@
 using <assert.h>::{ assert } // `err::assert()` has bad callsite effect breaking SSA for some reason
 
-using string::{ strlen }
+using buffer::{ strlen }
 using list::{ List, Node }
 using list
 using mem
@@ -11,7 +11,7 @@ fn cmp(char *left, void * unsafe right) -> bool
 {
   if 0 != right {
     static_attest(safe(right));
-    static_attest(len(right) > len(left));
+    static_attest(len(right) >= len(left));
     static_attest(nullterm(left));
     return mem::eq(left, right, strlen(left));
   }
@@ -229,9 +229,6 @@ fn test_list_index() {
 fn test_iterator() {
   new+5 mut original = list::make();
   new+5 mut copy = list::make();
-
-  static_attest(safe(original));
-  static_attest(safe(copy));
 
   original.push("a");
   original.push("b");
